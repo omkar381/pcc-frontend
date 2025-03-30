@@ -9,6 +9,7 @@ const StudentsList = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -67,6 +68,31 @@ const StudentsList = ({ onLogout }) => {
     } catch (err) {
       alert('Failed to upload admission form');
       console.error('Error uploading admission form:', err);
+    }
+  };
+
+  const handleDeleteStudent = async (studentId) => {
+    if (!window.confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeleteLoading(studentId);
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/admin/students/${studentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove the student from the list
+      setStudents(students.filter(student => student.id !== studentId));
+      
+      alert('Student deleted successfully');
+    } catch (err) {
+      alert('Failed to delete student: ' + (err.response?.data?.message || 'Unknown error'));
+      console.error('Error deleting student:', err);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -136,6 +162,9 @@ const StudentsList = ({ onLogout }) => {
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Admission Form
                           </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -184,6 +213,27 @@ const StudentsList = ({ onLogout }) => {
                                     </div>
                                   </form>
                                 )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                  disabled={deleteLoading === student.id}
+                                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                                >
+                                  {deleteLoading === student.id ? (
+                                    <span className="flex items-center">
+                                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Deleting...
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center">
+                                      <i className="fas fa-trash-alt mr-1.5"></i> Delete
+                                    </span>
+                                  )}
+                                </button>
                               </td>
                             </tr>
                           ))
