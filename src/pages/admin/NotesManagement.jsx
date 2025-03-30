@@ -15,6 +15,7 @@ const NotesManagement = ({ onLogout }) => {
   });
   const [noteFile, setNoteFile] = useState(null);
   const [filterSubject, setFilterSubject] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(null);
 
   const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology'];
 
@@ -100,6 +101,31 @@ const NotesManagement = ({ onLogout }) => {
       console.error('Error uploading note:', err);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeleteLoading(noteId);
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/admin/notes/${noteId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove the note from the list
+      setNotes(notes.filter(note => note.id !== noteId));
+      
+      setSuccess('Note deleted successfully!');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete note. Please try again.');
+      console.error('Error deleting note:', err);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -317,15 +343,37 @@ const NotesManagement = ({ onLogout }) => {
                             })}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              onClick={() => {
-                                const token = localStorage.getItem('token');
-                                window.open(`${API_URL}/api/notes/${note.id}/download?token=${token}`, '_blank');
-                              }}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300"
-                            >
-                              <i className="fas fa-download mr-1.5"></i> Download
-                            </button>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  const token = localStorage.getItem('token');
+                                  window.open(`${API_URL}/api/notes/${note.id}/download?token=${token}`, '_blank');
+                                }}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300"
+                              >
+                                <i className="fas fa-download mr-1.5"></i> Download
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                disabled={deleteLoading === note.id}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 disabled:opacity-50"
+                              >
+                                {deleteLoading === note.id ? (
+                                  <span className="flex items-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Deleting...
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center">
+                                    <i className="fas fa-trash-alt mr-1.5"></i> Delete
+                                  </span>
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
